@@ -19,15 +19,35 @@ struct InputEvent {
 }
 
 fn main() {
-    let mut f = io::BufReader::new(File::open("/dev/input/by-id/usb-Contour_Design_ShuttlePRO_v2-event-if00").unwrap());
+    let f = File::open("/dev/input/by-id/usb-Contour_Design_ShuttlePRO_v2-event-if00").unwrap();
+    let mut r = io::BufReader::new(f);
     mem::size_of::<InputEvent>();
 
     // TODO: Use sizeof.
     let mut buf: [u8; 24] = unsafe { mem::zeroed() };
 
-    while true {
-        f.read(&mut buf);
+    loop {
+        r.read(&mut buf);
         let e: InputEvent = unsafe { mem::transmute(buf) };
+        let d = Event::from(&e);
         print!("{:?}\n", e);
+        print!("{:?}\n", d);
+    }
+}
+
+#[derive(Debug)]
+enum Event {
+    Button,
+    Jog { v: i32 },
+    Wheel { v: i32 },
+}
+
+impl<'a> std::convert::From<&'a InputEvent> for Event {
+    fn from(ie: &'a InputEvent) -> Self {
+        return match ie.code {
+            7 => return Event::Jog{v: ie.value},
+            8 => Event::Wheel{v: ie.value},
+            _ => Event::Button,
+        }
     }
 }
