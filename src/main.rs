@@ -1,4 +1,3 @@
-use std::default;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
@@ -32,17 +31,17 @@ fn perform(mut state: State) -> Result<(), Box<Error>> {
     let mut buf = [0u8; 24];
 
     loop {
-        r.read(&mut buf);
+        try!(r.read(&mut buf));
         let e: InputEvent = unsafe { mem::transmute(buf) };
         let d = Event::from(&e);
         match d {
             Event::Unknown => (),
             Event::Jog{v} => {
                 if v > state.wheel {
-                    xdotool(Action::ScrollDown);
+                    try!(xdotool(Action::ScrollDown));
                 }
                 if v < state.wheel {
-                    xdotool(Action::ScrollUp);
+                    try!(xdotool(Action::ScrollUp));
                 }
                 state.wheel = v;
                 print!("{:?}\n", d);
@@ -55,10 +54,10 @@ fn perform(mut state: State) -> Result<(), Box<Error>> {
 }
 
 fn main() {
-    let mut state = State{ wheel: 0 };
-    if let Err(e) = perform(state) {
-        write!(io::stderr(), "{}", e).unwrap();
-    }
+    let state = State{ wheel: 0 };
+    perform(state)
+        .or_else(|e| write!(io::stderr(), "{}", e))
+        .unwrap();
 }
 
 #[derive(Debug)]
@@ -91,15 +90,15 @@ enum Action {
     ScrollDown,
 }
 
-fn xdotool(a: Action) {
+fn xdotool(a: Action) -> Result<(), Box<Error>> {
     let arg = match a {
         Action::ScrollUp => "4",
         Action::ScrollDown => "5",
     };
-    let mut child = std::process::Command::new("xdotool")
+    let mut child = try!(std::process::Command::new("xdotool")
         .arg("click")
         .arg(arg)
-        .spawn()
-        .unwrap();
-    child.wait();
+        .spawn());
+    try!(child.wait());
+    Ok(())
 }
