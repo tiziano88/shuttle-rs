@@ -46,6 +46,14 @@ fn perform(mut state: State) -> Result<(), Box<Error>> {
                 state.wheel = v;
                 print!("{:?}\n", d);
             },
+            Event::Button{v} => {
+                match v {
+                    269 => try!(xdotool(Action::Home)),
+                    270 => try!(xdotool(Action::End)),
+                    _ => {},
+                }
+                print!("{:?}\n", d);
+            },
             _ => {
                 print!("{:?}\n", d);
             }
@@ -88,16 +96,19 @@ impl<'a> std::convert::From<&'a InputEvent> for Event {
 enum Action {
     ScrollUp,
     ScrollDown,
+    Home,
+    End,
 }
 
 fn xdotool(a: Action) -> Result<(), Box<Error>> {
-    let arg = match a {
-        Action::ScrollUp => "4",
-        Action::ScrollDown => "5",
+    let args = match a {
+        Action::ScrollUp => ["click", "4"],
+        Action::ScrollDown => ["click", "5"],
+        Action::Home => ["key", "Home"],
+        Action::End => ["key", "End"],
     };
     let mut child = try!(std::process::Command::new("xdotool")
-        .arg("click")
-        .arg(arg)
+        .args(&args)
         .spawn());
     try!(child.wait());
     Ok(())
