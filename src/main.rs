@@ -1,3 +1,7 @@
+extern crate rustc_serialize;
+extern crate toml;
+
+use rustc_serialize::{Encodable, Decodable};
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
@@ -21,8 +25,55 @@ struct InputEvent {
     value: i32,
 }
 
-fn perform(mut state: State) -> Result<(), Box<Error>> {
-    let f = try!(File::open("/dev/input/by-id/usb-Contour_Design_ShuttlePRO_v2-event-if00"));
+#[derive(RustcEncodable,RustcDecodable)]
+#[derive(Debug)]
+struct ConfigGeneral {
+    device: String,
+}
+
+#[derive(RustcEncodable,RustcDecodable)]
+#[derive(Debug)]
+struct ConfigMap {
+    jog_up: Option<String>,
+    jog_down: Option<String>,
+    shuttle_up: Option<String>,
+    shuttle_down: Option<String>,
+    button_left: Option<String>,
+    button_right: Option<String>,
+    button_1: Option<String>,
+    button_2: Option<String>,
+}
+
+#[derive(RustcEncodable,RustcDecodable)]
+#[derive(Debug)]
+struct Config {
+    general: ConfigGeneral,
+    map: [ConfigMap; 2],
+}
+
+fn load_config_from_file(config_file_name: &str) -> Result<Config, Box<Error>> {
+    let mut config_file = try!(File::open(config_file_name));
+    let mut config_file_content = String::new();
+    try!(config_file.read_to_string(&mut config_file_content));
+
+    let config_table = toml::Value::Table(toml::Parser::new(&config_file_content).parse().unwrap());
+    println!("{:?}", config_table);
+
+    let mut d = toml::Decoder::new(config_table);
+    let config: Config = try!(Decodable::decode(&mut d));
+    Ok(config)
+}
+
+fn perform() -> Result<(), Box<Error>> {
+    let mut state = State{ wheel: 0 };
+
+    let config_file_name = "/home/tzn/.wheel.toml";
+    let config: Config = try!(load_config_from_file(config_file_name));
+    println!("config: {:?}", config);
+
+    let mut currentMap = &config.map[0];
+
+    let f = try!(File::open(config.general.device));
     let mut r = io::BufReader::new(f);
 
     // mem::size_of::<InputEvent>();
@@ -38,6 +89,8 @@ fn perform(mut state: State) -> Result<(), Box<Error>> {
             Event::Unknown => (),
             Event::Jog{v} => {
                 if v > state.wheel {
+                    // XXX
+                    action(currentMap.jog_down.unwrap_or("".to_string()));
                     try!(xdotool(Action::ScrollDown));
                 }
                 if v < state.wheel {
@@ -61,9 +114,11 @@ fn perform(mut state: State) -> Result<(), Box<Error>> {
     }
 }
 
+fn action(a: &str) {
+}
+
 fn main() {
-    let state = State{ wheel: 0 };
-    perform(state)
+    perform()
         .or_else(|e| write!(io::stderr(), "{}", e))
         .unwrap();
 }

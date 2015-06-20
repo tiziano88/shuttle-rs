@@ -4,4 +4,6 @@ version = "0.1.0"
 authors = ["Tiziano Santoro <tzn@google.com>"]
 
 [dependencies]
-libudev = "0.1.0"
+libudev = "0.1.*"
+toml = "0.1.*"
+rustc-serialize = "0.3.*"
