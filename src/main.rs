@@ -83,38 +83,50 @@ fn perform() -> Result<(), Box<Error>> {
 
     loop {
         try!(r.read(&mut buf));
-        let e: InputEvent = unsafe { mem::transmute(buf) };
-        let d = Event::from(&e);
-        match d {
+        let inputEvent: InputEvent = unsafe { mem::transmute(buf) };
+        let &mut actionString = &Option::Some("ls".to_string()); // XXX
+        let event = Event::from(&inputEvent);
+        print!("{:?}\n", event);
+        match event {
             Event::Unknown => (),
             Event::Jog{v} => {
                 if v > state.wheel {
-                    // XXX
-                    action(currentMap.jog_down.unwrap_or("".to_string()));
-                    try!(xdotool(Action::ScrollDown));
+                    actionString = currentMap.jog_down
                 }
                 if v < state.wheel {
-                    try!(xdotool(Action::ScrollUp));
+                    actionString = currentMap.jog_up
                 }
                 state.wheel = v;
-                print!("{:?}\n", d);
+            },
+            Event::Shuttle{v} => {
+                if v > 0 {
+                    actionString = currentMap.shuttle_down
+                }
+                if v < 0 {
+                    actionString = currentMap.shuttle_up
+                }
             },
             Event::Button{v} => {
                 match v {
-                    269 => try!(xdotool(Action::Home)),
-                    270 => try!(xdotool(Action::End)),
+                    269 => actionString = Some("xdotool key Home".to_string()),
+                    270 => actionString = Some("xdotool key End".to_string()),
                     _ => {},
                 }
-                print!("{:?}\n", d);
             },
-            _ => {
-                print!("{:?}\n", d);
-            }
+        }
+        if let Some(ref a) = actionString {
+            exec(a);
         }
     }
 }
 
-fn action(a: &str) {
+fn exec(a: &str) -> Result<(), Box<Error>> {
+    let mut child = try!(std::process::Command::new("/bin/bash")
+                         .arg("-c")
+                         .arg(a)
+                         .spawn());
+    try!(child.wait());
+    Ok(())
 }
 
 fn main() {
@@ -148,23 +160,3 @@ impl<'a> std::convert::From<&'a InputEvent> for Event {
     }
 }
 
-enum Action {
-    ScrollUp,
-    ScrollDown,
-    Home,
-    End,
-}
-
-fn xdotool(a: Action) -> Result<(), Box<Error>> {
-    let args = match a {
-        Action::ScrollUp => ["click", "4"],
-        Action::ScrollDown => ["click", "5"],
-        Action::Home => ["key", "Home"],
-        Action::End => ["key", "End"],
-    };
-    let mut child = try!(std::process::Command::new("xdotool")
-        .args(&args)
-        .spawn());
-    try!(child.wait());
-    Ok(())
-}
