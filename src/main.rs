@@ -71,7 +71,7 @@ fn perform() -> Result<(), Box<Error>> {
     let config: Config = try!(load_config_from_file(config_file_name));
     println!("config: {:?}", config);
 
-    let mut currentMap = &config.map[0];
+    let mut current_map = &config.map[0];
 
     let f = try!(File::open(config.general.device));
     let mut r = io::BufReader::new(f);
@@ -83,39 +83,39 @@ fn perform() -> Result<(), Box<Error>> {
 
     loop {
         try!(r.read(&mut buf));
-        let inputEvent: InputEvent = unsafe { mem::transmute(buf) };
-        let &mut actionString = &Option::Some("ls".to_string()); // XXX
-        let event = Event::from(&inputEvent);
+        let input_event: InputEvent = unsafe { mem::transmute(buf) };
+        let mut action_string = &Option::Some("ls".to_string()); // XXX
+        let event = Event::from(&input_event);
         print!("{:?}\n", event);
         match event {
             Event::Unknown => (),
             Event::Jog{v} => {
                 if v > state.wheel {
-                    actionString = currentMap.jog_down
+                    action_string = &current_map.jog_down
                 }
                 if v < state.wheel {
-                    actionString = currentMap.jog_up
+                    action_string = &current_map.jog_up
                 }
                 state.wheel = v;
             },
             Event::Shuttle{v} => {
                 if v > 0 {
-                    actionString = currentMap.shuttle_down
+                    action_string = &current_map.shuttle_down
                 }
                 if v < 0 {
-                    actionString = currentMap.shuttle_up
+                    action_string = &current_map.shuttle_up
                 }
             },
             Event::Button{v} => {
                 match v {
-                    269 => actionString = Some("xdotool key Home".to_string()),
-                    270 => actionString = Some("xdotool key End".to_string()),
+                    269 => action_string = &current_map.button_left,
+                    270 => action_string = &current_map.button_right,
                     _ => {},
                 }
             },
         }
-        if let Some(ref a) = actionString {
-            exec(a);
+        if let &Some(ref a) = action_string {
+            try!(exec(a));
         }
     }
 }
