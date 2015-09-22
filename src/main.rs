@@ -4,10 +4,12 @@ extern crate toml;
 use rustc_serialize::{Encodable, Decodable};
 use std::error::Error;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::io;
-use std::io::Write;
 use std::mem;
+use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 extern crate libudev;
 
@@ -71,6 +73,15 @@ fn perform() -> Result<(), Box<Error>> {
     let config: Config = try!(load_config_from_file(config_file_name));
     println!("config: {:?}", config);
 
+    let (tx, rx) = mpsc::channel::<&Event>();
+    thread::spawn(move || {
+        loop {
+            rx.recv();
+            println!("xxx");
+            thread::sleep_ms(100);
+        }
+    });
+
     let mut current_map = &config.map[0];
 
     let f = try!(File::open(config.general.device));
@@ -87,6 +98,8 @@ fn perform() -> Result<(), Box<Error>> {
         let mut action_string = &Option::Some("ls".to_string()); // XXX
         let event = Event::from(&input_event);
         print!("{:?}\n", event);
+        // XXX
+        // tx.send(&event);
         match event {
             Event::Unknown => (),
             Event::Jog{v} => {
