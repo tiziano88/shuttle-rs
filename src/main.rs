@@ -1,3 +1,5 @@
+#![feature(mpsc_select)]
+
 extern crate rustc_serialize;
 extern crate toml;
 
@@ -8,7 +10,6 @@ use std::io::{Read, Write};
 use std::io;
 use std::mem;
 use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
 use std::thread;
 
 extern crate libudev;
@@ -66,6 +67,26 @@ fn load_config_from_file(config_file_name: &str) -> Result<Config, Box<Error>> {
     Ok(config)
 }
 
+fn after_ms(t: u32) -> mpsc::Receiver<()> {
+    let (tx, rx) = mpsc::channel::<()>();
+    thread::spawn(move || {
+        thread::sleep_ms(t);
+        tx.send(()).unwrap();
+    });
+    rx
+}
+
+fn every_ms(t: u32) -> mpsc::Receiver<()> {
+    let (tx, rx) = mpsc::channel::<()>();
+    thread::spawn(move || {
+        loop {
+            thread::sleep_ms(t);
+            tx.send(()).unwrap();
+        }
+    });
+    rx
+}
+
 fn perform() -> Result<(), Box<Error>> {
     let mut state = State{ wheel: 0 };
 
@@ -73,16 +94,47 @@ fn perform() -> Result<(), Box<Error>> {
     let config: Config = try!(load_config_from_file(config_file_name));
     println!("config: {:?}", config);
 
-    let (tx, rx) = mpsc::channel::<&Event>();
+    let current_map = &config.map[0];
+
+    let (tx, rx) = mpsc::channel::<Event>();
     thread::spawn(move || {
+        let mut count = 0;
+        let mut target = 0;
+
+        // XXX: after_ms not working.
+        let tick_rx = every_ms(1000);
+
         loop {
-            rx.recv();
-            println!("xxx");
-            thread::sleep_ms(100);
+            select! {
+                e = rx.recv() => {
+                    println!("t: {:?}", e);
+                    if let Event::Shuttle{v} = e.unwrap() {
+                        target = v;
+                    }
+                },
+                // XXX: Strict syntax for macros?
+                _ = tick_rx.recv() => {
+                    if target != 0 {
+                        println!("count: {:?}", count);
+                        count += 1;
+                        if count >= target {
+                            println!("target");
+                            // XXX: Use current_map.
+                            let mut action_string = Option::Some("".to_string()); // XXX
+                            if target > 0 {
+                                action_string = Option::Some("".to_string());
+                            }
+                            if target < 0 {
+                                action_string = Option::Some("".to_string());
+                            }
+                            count = 0;
+                        }
+                    }
+                }
+            }
         }
     });
 
-    let mut current_map = &config.map[0];
 
     let f = try!(File::open(config.general.device));
     let mut r = io::BufReader::new(f);
@@ -95,11 +147,11 @@ fn perform() -> Result<(), Box<Error>> {
     loop {
         try!(r.read(&mut buf));
         let input_event: InputEvent = unsafe { mem::transmute(buf) };
-        let mut action_string = &Option::Some("ls".to_string()); // XXX
+        let mut action_string = &Option::Some("".to_string()); // XXX
         let event = Event::from(&input_event);
         print!("{:?}\n", event);
         // XXX
-        // tx.send(&event);
+        tx.send(event.clone()).unwrap();
         match event {
             Event::Unknown => (),
             Event::Jog{v} => {
@@ -148,7 +200,7 @@ fn main() {
         .unwrap();
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 enum Event {
     Unknown,
     Button { v: u16 },
