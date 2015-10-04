@@ -10,7 +10,9 @@ use std::io::{Read, Write};
 use std::io;
 use std::mem;
 use std::sync::mpsc;
+use std::sync::Arc;
 use std::thread;
+use std::vec;
 
 extern crate libudev;
 
@@ -19,7 +21,7 @@ struct State {
 }
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct InputEvent {
     tv_sec: isize,
     tv_usec: isize,
@@ -29,13 +31,13 @@ struct InputEvent {
 }
 
 #[derive(RustcEncodable,RustcDecodable)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ConfigGeneral {
     device: String,
 }
 
 #[derive(RustcEncodable,RustcDecodable)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ConfigMap {
     jog_up: Option<String>,
     jog_down: Option<String>,
@@ -48,10 +50,10 @@ struct ConfigMap {
 }
 
 #[derive(RustcEncodable,RustcDecodable)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Config {
     general: ConfigGeneral,
-    map: [ConfigMap; 2],
+    map: Vec<ConfigMap>,
 }
 
 fn load_config_from_file(config_file_name: &str) -> Result<Config, Box<Error>> {
@@ -87,29 +89,25 @@ fn every_ms(t: u32) -> mpsc::Receiver<()> {
     rx
 }
 
-fn perform() -> Result<(), Box<Error>> {
-    let mut state = State{ wheel: 0 };
-
-    let config_file_name = "/home/tzn/.wheel.toml";
-    let config: Config = try!(load_config_from_file(config_file_name));
-    println!("config: {:?}", config);
-
-    let current_map = &config.map[0];
-
-    let (tx, rx) = mpsc::channel::<Event>();
+// TODO: Avoid `config` clone + move.
+fn background(rx: mpsc::Receiver<Event>, config: Config) -> () {
     thread::spawn(move || {
         let mut count = 0;
         let mut target = 0;
 
         // XXX: after_ms not working.
-        let tick_rx = every_ms(1000);
+        let tick_rx = every_ms(10);
 
         loop {
             select! {
                 e = rx.recv() => {
                     println!("t: {:?}", e);
                     if let Event::Shuttle{v} = e.unwrap() {
-                        target = v;
+                        target = 10 / v;
+                        // TODO: Detect zero.
+                        if v.abs() == 1 {
+                            target = 0;
+                        }
                     }
                 },
                 // XXX: Strict syntax for macros?
@@ -117,26 +115,42 @@ fn perform() -> Result<(), Box<Error>> {
                     if target != 0 {
                         println!("count: {:?}", count);
                         count += 1;
-                        if count >= target {
-                            println!("target");
+                        if count >= target.abs() {
                             // XXX: Use current_map.
-                            let mut action_string = Option::Some("".to_string()); // XXX
+                            let ref map = config.map[0];
+                            let mut action_string = &Option::None;
                             if target > 0 {
-                                action_string = Option::Some("".to_string());
+                                action_string = &map.shuttle_down;
                             }
                             if target < 0 {
-                                action_string = Option::Some("".to_string());
+                                action_string = &map.shuttle_up;
                             }
                             count = 0;
+                            if let &Some(ref a) = action_string {
+                                // TODO: try!
+                                exec(a);
+                            }
                         }
                     }
                 }
             }
         }
     });
+}
 
+fn perform() -> Result<(), Box<Error>> {
+    let mut state = State{ wheel: 0 };
 
-    let f = try!(File::open(config.general.device));
+    let config_file_name = "/home/tzn/.wheel.toml";
+    let config: Config = try!(load_config_from_file(config_file_name));
+    println!("config: {:?}", config);
+
+    let current_map = Box::new(&config.map[0]);
+
+    let (tx, rx) = mpsc::channel::<Event>();
+    background(rx, config.clone());
+
+    let f = try!(File::open(&config.general.device));
     let mut r = io::BufReader::new(f);
 
     // mem::size_of::<InputEvent>();
@@ -210,6 +224,7 @@ enum Event {
 
 impl<'a> std::convert::From<&'a InputEvent> for Event {
     fn from(ie: &'a InputEvent) -> Self {
+        println!("input: {:?}", ie);
         match ie.type_ {
             1 => match ie.value {
                 1 => Event::Button{v: ie.code},
