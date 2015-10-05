@@ -1,7 +1,8 @@
-#![feature(mpsc_select)]
-
 extern crate rustc_serialize;
 extern crate toml;
+
+#[macro_use]
+extern crate chan;
 
 use rustc_serialize::{Encodable, Decodable};
 use std::error::Error;
@@ -9,7 +10,6 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::io;
 use std::mem;
-use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
 use std::vec;
@@ -69,38 +69,18 @@ fn load_config_from_file(config_file_name: &str) -> Result<Config, Box<Error>> {
     Ok(config)
 }
 
-fn after_ms(t: u32) -> mpsc::Receiver<()> {
-    let (tx, rx) = mpsc::channel::<()>();
-    thread::spawn(move || {
-        thread::sleep_ms(t);
-        tx.send(()).unwrap();
-    });
-    rx
-}
-
-fn every_ms(t: u32) -> mpsc::Receiver<()> {
-    let (tx, rx) = mpsc::channel::<()>();
-    thread::spawn(move || {
-        loop {
-            thread::sleep_ms(t);
-            tx.send(()).unwrap();
-        }
-    });
-    rx
-}
-
 // TODO: Avoid `config` clone + move.
-fn background(rx: mpsc::Receiver<Event>, config: Config) -> () {
+fn background(rx: chan::Receiver<Event>, config: Arc<Config>) -> () {
     thread::spawn(move || {
         let mut count = 0;
         let mut target = 0;
 
         // XXX: after_ms not working.
-        let tick_rx = every_ms(10);
+        let tick_rx = chan::tick_ms(10);
 
         loop {
-            select! {
-                e = rx.recv() => {
+            chan_select! {
+                rx.recv() -> e => {
                     println!("t: {:?}", e);
                     if let Event::Shuttle{v} = e.unwrap() {
                         target = 10 / v;
@@ -111,7 +91,7 @@ fn background(rx: mpsc::Receiver<Event>, config: Config) -> () {
                     }
                 },
                 // XXX: Strict syntax for macros?
-                _ = tick_rx.recv() => {
+                tick_rx.recv() -> _ => {
                     if target != 0 {
                         println!("count: {:?}", count);
                         count += 1;
@@ -141,13 +121,15 @@ fn background(rx: mpsc::Receiver<Event>, config: Config) -> () {
 fn perform() -> Result<(), Box<Error>> {
     let mut state = State{ wheel: 0 };
 
-    let config_file_name = "/home/tzn/.wheel.toml";
-    let config: Config = try!(load_config_from_file(config_file_name));
+    // TODO: Handle errors.
+    let home = std::env::home_dir().unwrap();
+    let config_file_name = format!("{}/.wheel.toml", home.display());
+    let config = Arc::new(try!(load_config_from_file(&config_file_name)));
     println!("config: {:?}", config);
 
     let current_map = Box::new(&config.map[0]);
 
-    let (tx, rx) = mpsc::channel::<Event>();
+    let (tx, rx) = chan::sync(0);
     background(rx, config.clone());
 
     let f = try!(File::open(&config.general.device));
@@ -164,8 +146,7 @@ fn perform() -> Result<(), Box<Error>> {
         let mut action_string = &Option::Some("".to_string()); // XXX
         let event = Event::from(&input_event);
         print!("{:?}\n", event);
-        // XXX
-        tx.send(event.clone()).unwrap();
+        tx.send(event.clone());
         match event {
             Event::Unknown => (),
             Event::Jog{v} => {
