@@ -79,36 +79,52 @@ fn background(rx: chan::Receiver<Event>, config: Arc<Config>) -> () {
         let tick_rx = chan::tick_ms(10);
 
         loop {
-            chan_select! {
-                rx.recv() -> e => {
-                    println!("t: {:?}", e);
-                    if let Event::Shuttle{v} = e.unwrap() {
-                        target = 10 / v;
-                        // TODO: Detect zero.
-                        if v.abs() == 1 {
-                            target = 0;
+            if target == 0 {
+                // TODO: Find more elegant approach.
+                chan_select! {
+                    rx.recv() -> e => {
+                        println!("t: {:?}", e);
+                        if let Event::Shuttle{v} = e.unwrap() {
+                            target = 10 / v;
+                            // TODO: Detect zero.
+                            if v.abs() == 1 {
+                                target = 0;
+                            }
                         }
-                    }
-                },
-                // XXX: Strict syntax for macros?
-                tick_rx.recv() -> _ => {
-                    if target != 0 {
-                        println!("count: {:?}", count);
-                        count += 1;
-                        if count >= target.abs() {
-                            // XXX: Use current_map.
-                            let ref map = config.map[0];
-                            let mut action_string = &Option::None;
-                            if target > 0 {
-                                action_string = &map.shuttle_down;
+                    },
+                }
+            } else {
+                chan_select! {
+                    rx.recv() -> e => {
+                        println!("t: {:?}", e);
+                        if let Event::Shuttle{v} = e.unwrap() {
+                            target = 10 / v;
+                            // TODO: Detect zero.
+                            if v.abs() == 1 {
+                                target = 0;
                             }
-                            if target < 0 {
-                                action_string = &map.shuttle_up;
-                            }
-                            count = 0;
-                            if let &Some(ref a) = action_string {
-                                // TODO: try!
-                                exec(a);
+                        }
+                    },
+                    // XXX: Strict syntax for macros?
+                    tick_rx.recv() -> _ => {
+                        if target != 0 {
+                            print!("{:?}", count);
+                            count += 1;
+                            if count >= target.abs() {
+                                // XXX: Use current_map.
+                                let ref map = config.map[0];
+                                let mut action_string = &Option::None;
+                                if target > 0 {
+                                    action_string = &map.shuttle_down;
+                                }
+                                if target < 0 {
+                                    action_string = &map.shuttle_up;
+                                }
+                                count = 0;
+                                if let &Some(ref a) = action_string {
+                                    // TODO: try!
+                                    exec(a);
+                                }
                             }
                         }
                     }
