@@ -135,7 +135,7 @@ fn background(rx: chan::Receiver<Event>, config: Arc<Config>) -> () {
 }
 
 fn perform() -> Result<(), Box<Error>> {
-    let mut state = State{ wheel: 0 };
+    let mut state = State { wheel: 0 };
 
     // TODO: Handle errors.
     let home = std::env::home_dir().unwrap();
@@ -165,7 +165,7 @@ fn perform() -> Result<(), Box<Error>> {
         tx.send(event.clone());
         match event {
             Event::Unknown => (),
-            Event::Jog{v} => {
+            Event::Jog { v } => {
                 if v > state.wheel {
                     action_string = &current_map.jog_down
                 }
@@ -173,22 +173,22 @@ fn perform() -> Result<(), Box<Error>> {
                     action_string = &current_map.jog_up
                 }
                 state.wheel = v;
-            },
-            Event::Shuttle{v} => {
+            }
+            Event::Shuttle { v } => {
                 if v > 0 {
                     action_string = &current_map.shuttle_down
                 }
                 if v < 0 {
                     action_string = &current_map.shuttle_up
                 }
-            },
-            Event::Button{v} => {
+            }
+            Event::Button { v } => {
                 match v {
                     269 => action_string = &current_map.button_left,
                     270 => action_string = &current_map.button_right,
-                    _ => {},
+                    _ => {}
                 }
-            },
+            }
         }
         if let &Some(ref a) = action_string {
             try!(exec(a));
@@ -198,9 +198,9 @@ fn perform() -> Result<(), Box<Error>> {
 
 fn exec(a: &str) -> Result<(), Box<Error>> {
     let mut child = try!(std::process::Command::new("/bin/bash")
-                         .arg("-c")
-                         .arg(a)
-                         .spawn());
+        .arg("-c")
+        .arg(a)
+        .spawn());
     try!(child.wait());
     Ok(())
 }
@@ -223,17 +223,20 @@ impl<'a> std::convert::From<&'a InputEvent> for Event {
     fn from(ie: &'a InputEvent) -> Self {
         println!("input: {:?}", ie);
         match ie.type_ {
-            1 => match ie.value {
-                1 => Event::Button{v: ie.code},
-                _ => Event::Unknown,
-            },
-            2 => match ie.code {
-                7 => Event::Jog{v: ie.value},
-                8 => Event::Shuttle{v: ie.value},
-                _ => Event::Unknown,
-            },
+            1 => {
+                match ie.value {
+                    1 => Event::Button { v: ie.code },
+                    _ => Event::Unknown,
+                }
+            }
+            2 => {
+                match ie.code {
+                    7 => Event::Jog { v: ie.value },
+                    8 => Event::Shuttle { v: ie.value },
+                    _ => Event::Unknown,
+                }
+            }
             _ => Event::Unknown,
         }
     }
 }
-
