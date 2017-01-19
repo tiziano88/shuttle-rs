@@ -4,7 +4,7 @@ extern crate toml;
 #[macro_use]
 extern crate chan;
 
-use rustc_serialize::{Encodable, Decodable};
+use rustc_serialize::Decodable;
 use std::error::Error;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -12,7 +12,6 @@ use std::io;
 use std::mem;
 use std::sync::Arc;
 use std::thread;
-use std::vec;
 
 extern crate libudev;
 
@@ -57,15 +56,15 @@ struct Config {
 }
 
 fn load_config_from_file(config_file_name: &str) -> Result<Config, Box<Error>> {
-    let mut config_file = try!(File::open(config_file_name));
+    let mut config_file = File::open(config_file_name)?;
     let mut config_file_content = String::new();
-    try!(config_file.read_to_string(&mut config_file_content));
+    config_file.read_to_string(&mut config_file_content)?;
 
     let config_table = toml::Value::Table(toml::Parser::new(&config_file_content).parse().unwrap());
     println!("{:?}", config_table);
 
     let mut d = toml::Decoder::new(config_table);
-    let config: Config = try!(Decodable::decode(&mut d));
+    let config: Config = Decodable::decode(&mut d)?;
     Ok(config)
 }
 
@@ -140,7 +139,7 @@ fn perform() -> Result<(), Box<Error>> {
     // TODO: Handle errors.
     let home = std::env::home_dir().unwrap();
     let config_file_name = format!("{}/.wheel.toml", home.display());
-    let config = Arc::new(try!(load_config_from_file(&config_file_name)));
+    let config = Arc::new(load_config_from_file(&config_file_name)?);
     println!("config: {:?}", config);
 
     let current_map = Box::new(&config.map[0]);
@@ -148,7 +147,7 @@ fn perform() -> Result<(), Box<Error>> {
     let (tx, rx) = chan::sync(0);
     background(rx, config.clone());
 
-    let f = try!(File::open(&config.general.device));
+    let f = File::open(&config.general.device)?;
     let mut r = io::BufReader::new(f);
 
     // mem::size_of::<InputEvent>();
@@ -157,7 +156,7 @@ fn perform() -> Result<(), Box<Error>> {
     let mut buf = [0u8; 24];
 
     loop {
-        try!(r.read(&mut buf));
+        r.read(&mut buf)?;
         let input_event: InputEvent = unsafe { mem::transmute(buf) };
         let mut action_string = &Option::Some("".to_string()); // XXX
         let event = Event::from(&input_event);
@@ -191,17 +190,14 @@ fn perform() -> Result<(), Box<Error>> {
             }
         }
         if let &Some(ref a) = action_string {
-            try!(exec(a));
+            exec(a)?;
         }
     }
 }
 
 fn exec(a: &str) -> Result<(), Box<Error>> {
-    let mut child = try!(std::process::Command::new("/bin/bash")
-        .arg("-c")
-        .arg(a)
-        .spawn());
-    try!(child.wait());
+    let mut child = std::process::Command::new("/bin/bash").arg("-c").arg(a).spawn()?;
+    child.wait()?;
     Ok(())
 }
 
