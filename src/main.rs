@@ -44,8 +44,17 @@ struct ConfigMap {
     shuttle_down: Option<String>,
     button_left: Option<String>,
     button_right: Option<String>,
+
     button_1: Option<String>,
     button_2: Option<String>,
+    button_3: Option<String>,
+    button_4: Option<String>,
+
+    button_5: Option<String>,
+    button_6: Option<String>,
+    button_7: Option<String>,
+    button_8: Option<String>,
+    button_9: Option<String>,
 }
 
 #[derive(RustcEncodable,RustcDecodable)]
@@ -183,6 +192,17 @@ fn perform() -> Result<(), Box<Error>> {
             }
             Event::Button { v } => {
                 match v {
+                    256 => action_string = &current_map.button_1,
+                    257 => action_string = &current_map.button_2,
+                    258 => action_string = &current_map.button_3,
+                    259 => action_string = &current_map.button_4,
+
+                    260 => action_string = &current_map.button_5,
+                    261 => action_string = &current_map.button_6,
+                    262 => action_string = &current_map.button_7,
+                    263 => action_string = &current_map.button_8,
+                    264 => action_string = &current_map.button_9,
+
                     269 => action_string = &current_map.button_left,
                     270 => action_string = &current_map.button_right,
                     _ => {}
