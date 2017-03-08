@@ -1,10 +1,10 @@
-extern crate rustc_serialize;
+#[macro_use]
+extern crate serde_derive;
 extern crate toml;
 
 #[macro_use]
 extern crate chan;
 
-use rustc_serialize::Decodable;
 use std::error::Error;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -29,13 +29,13 @@ struct InputEvent {
     value: i32,
 }
 
-#[derive(RustcEncodable,RustcDecodable)]
+#[derive(Serialize,Deserialize)]
 #[derive(Debug, Clone)]
 struct ConfigGeneral {
     device: String,
 }
 
-#[derive(RustcEncodable,RustcDecodable)]
+#[derive(Serialize,Deserialize)]
 #[derive(Debug, Clone)]
 struct ConfigMap {
     jog_up: Option<String>,
@@ -57,7 +57,7 @@ struct ConfigMap {
     button_9: Option<String>,
 }
 
-#[derive(RustcEncodable,RustcDecodable)]
+#[derive(Serialize,Deserialize)]
 #[derive(Debug, Clone)]
 struct Config {
     general: ConfigGeneral,
@@ -68,12 +68,7 @@ fn load_config_from_file(config_file_name: &str) -> Result<Config, Box<Error>> {
     let mut config_file = File::open(config_file_name)?;
     let mut config_file_content = String::new();
     config_file.read_to_string(&mut config_file_content)?;
-
-    let config_table = toml::Value::Table(toml::Parser::new(&config_file_content).parse().unwrap());
-    println!("{:?}", config_table);
-
-    let mut d = toml::Decoder::new(config_table);
-    let config: Config = Decodable::decode(&mut d)?;
+    let config: Config = toml::from_str(&config_file_content)?;
     Ok(config)
 }
 

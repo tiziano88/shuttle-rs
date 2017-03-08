@@ -5,6 +5,7 @@ authors = ["Tiziano Santoro <tzn@google.com>"]
 
 [dependencies]
 libudev = "0.2.*"
-toml = "0.2.*"
-rustc-serialize = "0.3.*"
+toml = "0.3.*"
+serde = "0.9.*"
+serde_derive = "0.9.*"
 chan = "0.1.*"
