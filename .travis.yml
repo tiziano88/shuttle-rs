@@ -2,4 +2,4 @@ language: rust
 addons:
   apt:
     packages:
-      - libudev-dbg
+      - libudev-dev
