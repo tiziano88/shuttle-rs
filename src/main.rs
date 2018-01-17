@@ -53,6 +53,11 @@ struct ConfigMap {
     button_7: Option<String>,
     button_8: Option<String>,
     button_9: Option<String>,
+
+    button_10: Option<String>,
+    button_11: Option<String>,
+    button_12: Option<String>,
+    button_13: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -193,6 +198,11 @@ fn perform() -> Result<(), Box<Error>> {
                 262 => action_string = &current_map.button_7,
                 263 => action_string = &current_map.button_8,
                 264 => action_string = &current_map.button_9,
+
+                265 => action_string = &current_map.button_10,
+                266 => action_string = &current_map.button_11,
+                267 => action_string = &current_map.button_12,
+                268 => action_string = &current_map.button_13,
 
                 269 => action_string = &current_map.button_left,
                 270 => action_string = &current_map.button_right,
