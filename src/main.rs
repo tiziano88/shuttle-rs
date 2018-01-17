@@ -38,22 +38,27 @@ struct ConfigGeneral {
 struct ConfigMap {
     jog_up: Option<String>,
     jog_down: Option<String>,
+
     shuttle_up: Option<String>,
     shuttle_down: Option<String>,
-    button_left: Option<String>,
-    button_right: Option<String>,
 
+    // First row.
     button_1: Option<String>,
     button_2: Option<String>,
     button_3: Option<String>,
     button_4: Option<String>,
 
+    // Second row.
     button_5: Option<String>,
     button_6: Option<String>,
     button_7: Option<String>,
     button_8: Option<String>,
     button_9: Option<String>,
 
+    button_left: Option<String>,
+    button_right: Option<String>,
+
+    // Bottom rows.
     button_10: Option<String>,
     button_11: Option<String>,
     button_12: Option<String>,
