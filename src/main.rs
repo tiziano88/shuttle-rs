@@ -29,14 +29,12 @@ struct InputEvent {
     value: i32,
 }
 
-#[derive(Serialize,Deserialize)]
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct ConfigGeneral {
     device: String,
 }
 
-#[derive(Serialize,Deserialize)]
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct ConfigMap {
     jog_up: Option<String>,
     jog_down: Option<String>,
@@ -57,8 +55,7 @@ struct ConfigMap {
     button_9: Option<String>,
 }
 
-#[derive(Serialize,Deserialize)]
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Config {
     general: ConfigGeneral,
     map: Vec<ConfigMap>,
@@ -185,24 +182,22 @@ fn perform() -> Result<(), Box<Error>> {
                     action_string = &current_map.shuttle_up
                 }
             }
-            Event::Button { v } => {
-                match v {
-                    256 => action_string = &current_map.button_1,
-                    257 => action_string = &current_map.button_2,
-                    258 => action_string = &current_map.button_3,
-                    259 => action_string = &current_map.button_4,
+            Event::Button { v } => match v {
+                256 => action_string = &current_map.button_1,
+                257 => action_string = &current_map.button_2,
+                258 => action_string = &current_map.button_3,
+                259 => action_string = &current_map.button_4,
 
-                    260 => action_string = &current_map.button_5,
-                    261 => action_string = &current_map.button_6,
-                    262 => action_string = &current_map.button_7,
-                    263 => action_string = &current_map.button_8,
-                    264 => action_string = &current_map.button_9,
+                260 => action_string = &current_map.button_5,
+                261 => action_string = &current_map.button_6,
+                262 => action_string = &current_map.button_7,
+                263 => action_string = &current_map.button_8,
+                264 => action_string = &current_map.button_9,
 
-                    269 => action_string = &current_map.button_left,
-                    270 => action_string = &current_map.button_right,
-                    _ => {}
-                }
-            }
+                269 => action_string = &current_map.button_left,
+                270 => action_string = &current_map.button_right,
+                _ => {}
+            },
         }
         if let &Some(ref a) = action_string {
             exec(a)?;
@@ -211,7 +206,10 @@ fn perform() -> Result<(), Box<Error>> {
 }
 
 fn exec(a: &str) -> Result<(), Box<Error>> {
-    let mut child = std::process::Command::new("/bin/bash").arg("-c").arg(a).spawn()?;
+    let mut child = std::process::Command::new("/bin/bash")
+        .arg("-c")
+        .arg(a)
+        .spawn()?;
     child.wait()?;
     Ok(())
 }
@@ -226,7 +224,7 @@ fn main() {
 enum Event {
     Unknown,
     Button { v: u16 },
-    Jog { v: i32 }, // Endless.
+    Jog { v: i32 },     // Endless.
     Shuttle { v: i32 }, // Springy.
 }
 
@@ -234,19 +232,15 @@ impl<'a> std::convert::From<&'a InputEvent> for Event {
     fn from(ie: &'a InputEvent) -> Self {
         println!("input: {:?}", ie);
         match ie.type_ {
-            1 => {
-                match ie.value {
-                    1 => Event::Button { v: ie.code },
-                    _ => Event::Unknown,
-                }
-            }
-            2 => {
-                match ie.code {
-                    7 => Event::Jog { v: ie.value },
-                    8 => Event::Shuttle { v: ie.value },
-                    _ => Event::Unknown,
-                }
-            }
+            1 => match ie.value {
+                1 => Event::Button { v: ie.code },
+                _ => Event::Unknown,
+            },
+            2 => match ie.code {
+                7 => Event::Jog { v: ie.value },
+                8 => Event::Shuttle { v: ie.value },
+                _ => Event::Unknown,
+            },
             _ => Event::Unknown,
         }
     }
