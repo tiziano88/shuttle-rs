@@ -153,7 +153,7 @@ fn perform() -> Result<(), Box<Error>> {
     let config = Arc::new(load_config_from_file(&config_file_name)?);
     println!("config: {:?}", config);
 
-    let current_map = Box::new(&config.map[0]);
+    let mut current_map = Box::new(&config.map[0]);
 
     let (tx, rx) = chan::sync(0);
     background(rx, config.clone());
@@ -193,10 +193,22 @@ fn perform() -> Result<(), Box<Error>> {
                 }
             }
             Event::Button { v } => match v {
-                256 => action_string = &current_map.button_1,
-                257 => action_string = &current_map.button_2,
-                258 => action_string = &current_map.button_3,
-                259 => action_string = &current_map.button_4,
+                256 => {
+                    action_string = &current_map.button_1;
+                    current_map = Box::new(&config.map[0]);
+                }
+                257 => {
+                    action_string = &current_map.button_2;
+                    current_map = Box::new(&config.map[1]);
+                }
+                258 => {
+                    action_string = &current_map.button_3;
+                    current_map = Box::new(&config.map[2]);
+                }
+                259 => {
+                    action_string = &current_map.button_4;
+                    current_map = Box::new(&config.map[3]);
+                }
 
                 260 => action_string = &current_map.button_5,
                 261 => action_string = &current_map.button_6,
