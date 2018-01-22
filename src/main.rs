@@ -1,19 +1,18 @@
 #[macro_use]
+extern crate chan;
+extern crate failure;
+extern crate libudev;
+#[macro_use]
 extern crate serde_derive;
 extern crate toml;
 
-#[macro_use]
-extern crate chan;
-
-use std::error::Error;
+use failure::Error;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::io;
 use std::mem;
 use std::sync::Arc;
 use std::thread;
-
-extern crate libudev;
 
 struct State {
     wheel: i32,
@@ -71,7 +70,7 @@ struct Config {
     map: Vec<ConfigMap>,
 }
 
-fn load_config_from_file(config_file_name: &str) -> Result<Config, Box<Error>> {
+fn load_config_from_file(config_file_name: &str) -> Result<Config, Error> {
     let mut config_file = File::open(config_file_name)?;
     let mut config_file_content = String::new();
     config_file.read_to_string(&mut config_file_content)?;
@@ -144,7 +143,7 @@ fn background(rx: chan::Receiver<Event>, config: Arc<Config>) -> () {
     });
 }
 
-fn perform() -> Result<(), Box<Error>> {
+fn perform() -> Result<(), Error> {
     let mut state = State { wheel: 0 };
 
     // TODO: Handle errors.
@@ -232,7 +231,7 @@ fn perform() -> Result<(), Box<Error>> {
     }
 }
 
-fn exec(a: &str) -> Result<(), Box<Error>> {
+fn exec(a: &str) -> Result<(), Error> {
     let mut child = std::process::Command::new("/bin/bash")
         .arg("-c")
         .arg(a)
