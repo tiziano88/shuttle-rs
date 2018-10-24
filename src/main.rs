@@ -8,8 +8,8 @@ extern crate toml;
 
 use failure::Error;
 use std::fs::File;
-use std::io::{Read, Write};
 use std::io;
+use std::io::{Read, Write};
 use std::mem;
 use std::sync::Arc;
 use std::thread;
