@@ -232,11 +232,11 @@ fn perform() -> Result<(), Error> {
 }
 
 fn exec(a: &str) -> Result<(), Error> {
-    let mut child = std::process::Command::new("/bin/bash")
+    let _child = std::process::Command::new("/bin/bash")
         .arg("-c")
         .arg(a)
         .spawn()?;
-    child.wait()?;
+    // Do not wait for the child process, so that other events can be processed in the meanwhile.
     Ok(())
 }
 
