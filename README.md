@@ -2,3 +2,9 @@
 
 A user-mode driver for the [ShuttlePRO v2](https://contour-design.co.uk/product/shuttlepro-v2/)
 scroll wheel device.
+
+## Pre-requisites
+
+```
+sudo apt install libudev-dev
+```
