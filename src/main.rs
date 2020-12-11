@@ -143,7 +143,7 @@ fn background(rx: chan::Receiver<Event>, config: Arc<Config>) -> () {
     });
 }
 
-fn perform() -> Result<(), Error> {
+fn main() -> Result<(), Error> {
     let mut state = State { wheel: 0 };
 
     // TODO: Handle errors.
@@ -240,10 +240,49 @@ fn exec(a: &str) -> Result<(), Error> {
     Ok(())
 }
 
-fn main() {
-    perform()
-        .or_else(|e| write!(io::stderr(), "{}", e))
-        .unwrap();
+fn x() {
+    unsafe {
+        // https://searchcode.com/codesearch/view/20234919/
+        let xlib = x11_dl::xlib::Xlib::open().unwrap();
+        let display = (xlib.XOpenDisplay)(std::ptr::null());
+        let event = x11_dl::xlib::XMotionEvent {
+            type_: 0,
+            serial: 0,
+            send_event: 1,
+            display: display,
+            window: 1,
+            root: 1,
+            subwindow: 1,
+            time: 1,
+            x: 0,
+            y: 0,
+            x_root: 0,
+            y_root: 0,
+            state: 0,
+            is_hint: 0,
+            same_screen: 0,
+        };
+        let event = x11_dl::xlib::XKeyEvent {
+            type_: 0,
+            serial: 0,
+            send_event: 1,
+            display: display,
+            window: 0,
+            root: 0x7d3,
+            subwindow: 0,
+            time: 0,
+            // keycode: 38,
+            keycode: 0x61,
+            x: 0,
+            y: 0,
+            x_root: 0,
+            y_root: 0,
+            state: 0,
+            same_screen: 1,
+        };
+        let mut e = x11_dl::xlib::XEvent { key: event };
+        (xlib.XSendEvent)(display, 0, 1, 0, &mut e);
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
