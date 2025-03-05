@@ -4,10 +4,10 @@ version = "0.1.0"
 authors = ["Tiziano Santoro <tiziano88@gmail.com>"]
 
 [dependencies]
-chan = "*"
-failure = "*"
-libudev = "*"
-serde = "*"
-serde_derive = "*"
-toml = "*"
-x11-dl = "*"
+chan = "0.1.23"
+failure = "0.1.8"
+libudev = "0.2.0"
+serde = "1.0.118"
+serde_derive = "1.0.118"
+toml = "0.5.7"
+x11-dl = "2.18.5"
